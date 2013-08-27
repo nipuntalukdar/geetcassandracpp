@@ -12,10 +12,10 @@ LD_FLAGS := -L /usr/local/lib -lboost_system
 	g++ $(CPPFLAGS) -I${CQLINCLUDE} -g -c $< -o  $@
 SHARED_LIB = libgeetcasscql.so
 TESTBIN = testout
-libshared: ${CQL_CPP_OBJS}
+${SHARED_LIB} : ${CQL_CPP_OBJS}
 	g++ -shared -fPIC -o ${SHARED_LIB} ${CQL_CPP_OBJS}
-testout: libshared ${TEST_OBJS}
+${TESTBIN}: ${SHARED_LIB} ${TEST_OBJS}
 	g++ -o ${TESTBIN} ${TEST_OBJS} -L. -lgeetcasscql ${LD_FLAGS}
-all: testout libshared
+all: ${SHARED_LIB} ${TESTBIN} 
 clean:
 	rm -f ${CQL_CPP_OBJS} ${SHARED_LIB} ${TESTBIN} ${TEST_OBJS}

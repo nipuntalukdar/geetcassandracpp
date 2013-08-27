@@ -48,6 +48,7 @@ const uint8_t RESPONSE_VERSION = 0x81;
 const string CQL_VERSION_KEY =  "CQL_VERSION";
 const string CURRENT_CQL_VERSION = "3.0.0";
 const string COMPRESSION_KEY = "COMPRESSION";
+const uint32_t GLOBAL_TABLE_SPEC_PRESENT = 1;
 
 enum class ConsistencyLevel : uint16_t {
     ANY = 0x0000,
@@ -85,6 +86,30 @@ enum class ResultCode : uint32_t {
     RESULT_PREPARED = 0x0004,
     RESULT_SCHEMA_CHANGED = 0x0005
 };
+
+enum class Cql3Types : uint16_t {
+    CUSTOM = 0x0000,
+    ASCII = 0x0001,
+    BIGINT = 0x0002,
+    BLOB = 0x0003,
+    BOOLEAN = 0x0004,
+    COUNTER = 0x0005,
+    DECIMAL = 0x0006,
+    DOUBLE = 0x0007,
+    FLOAT = 0x0008,
+    INT = 0x0009,
+    TEXT = 0x000A,
+    TIMESTAMP = 0x000B,
+    UUID = 0x000C,
+    VARCHAR = 0x000D,
+    VARINT = 0x000E,
+    TIMEUUID = 0x000F,
+    INET = 0x0010,
+    LIST = 0x0020,
+    MAP = 0x0021,
+    SET = 0x0022
+};
+
 }  // GeetCass napespace ends
 
 #endif

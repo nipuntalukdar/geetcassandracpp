@@ -21,9 +21,20 @@
 #include <cql3cons.hpp>
 #include <cql3header.hpp>
 #include <encode.hpp>
+#include <vector>
+using std::vector;
 
 namespace GeetCass
 {
+
+struct Cql3RowMetaData
+{
+    static void init(ByteBuffer& buffer, Cql3RowMetaData& metadata);
+    uint32_t flags;
+    uint32_t column_count;
+    string global_table_spec[2];
+    vector<string> column_specs;
+};
 
 class Cql3Result 
 {
