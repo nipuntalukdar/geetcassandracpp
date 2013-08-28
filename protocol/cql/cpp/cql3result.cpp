@@ -23,11 +23,11 @@ using namespace GeetCass;
 void Cql3RowMetaData::init(ByteBuffer& buffer, Cql3RowMetaData& metadata)
 {
     metadata.flags = buffer.getInt32();
+    metadata.column_count = buffer.getInt32();
     if (GLOBAL_TABLE_SPEC_PRESENT == metadata.flags) {
         Utility::readShortString(buffer, metadata.global_table_spec[0]);
         Utility::readShortString(buffer, metadata.global_table_spec[1]);
     }
-    metadata.column_count = buffer.getInt32();
 }
 
 Cql3Result::Cql3Result(ByteBuffer& buffer)
@@ -65,6 +65,10 @@ void Cql3Result::setBuffer(ByteBuffer& buffer)
 {
     _resultData = &buffer;
     _resultCode = (ResultCode) buffer.getUInt32();
+    if (ResultCode::RESULT_ROWS == _resultCode){
+        Cql3RowMetaData metadata;
+        metadata.init(buffer, metadata);
+    }
 }
 
 ResultCode Cql3Result::getResultCode() const

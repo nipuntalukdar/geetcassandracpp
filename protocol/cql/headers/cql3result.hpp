@@ -17,6 +17,7 @@
 
 #ifndef __GEETCASS_CQL3RESULT__
 #define __GEETCASS_CQL3RESULT__
+#include <boost/shared_ptr.hpp>
 #include <bytebuffer.hpp>
 #include <cql3cons.hpp>
 #include <cql3header.hpp>
@@ -36,8 +37,26 @@ struct Cql3RowMetaData
     vector<string> column_specs;
 };
 
+
+class Cql3Rows
+{
+public:
+    uint32_t getRowCount();
+    Cql3Row getNextRow();
+    Cql3Row getRow(uint32_t rowNum);
+
+private:
+    size_t _startInByteBuffer;
+    uint32_t _currentRow;
+    uint32_t _maxRow;
+    vector <int> _rowPositions;
+    boost::shared_ptr<ByteBuffer> _buffer;
+    Cql3RowMetaData _metaData;
+};
+
 class Cql3Result 
 {
+
 public:
     Cql3Result(ByteBuffer& buffer);
     Cql3Result();
@@ -46,8 +65,9 @@ public:
     void setBuffer(ByteBuffer& buffer);
     ResultCode getResultCode() const;
     ~Cql3Result();
+
 private:
-    ByteBuffer* _resultData;
+    boost::shared_ptr<ByteBuffer> _resultData;
     ResultCode _resultCode;
 };
 }  // GeetCass napespace ends
