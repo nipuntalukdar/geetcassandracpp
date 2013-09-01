@@ -89,12 +89,11 @@ int main()
             cout << "Some problem \n";
         }
 
-        /*
-        string query = "CREATE KEYSPACE whambam with replication = { 'class' : 'SimpleStrategy', 'replication_factor' : '1' } ";
+        query = "CREATE KEYSPACE whambam with replication = { 'class' : 'SimpleStrategy', 'replication_factor' : '1' } ";
         header = new Cql3Header(REQUEST_VERSION, 0 , 0, OpCode::QUERY);
         body = new Cql3Query(query);
         request = new Cql3Request(header, body);
-        ByteBuffer bf3(request->getSize() + 1000);
+        bf3.rewind();
         request->encode(bf3);
         conn->write(bf3.getRaw(), bf3.position(0));
         read_size =  conn->read(read_data, 8);
@@ -114,7 +113,6 @@ int main()
             cout << errorMsg << endl;
         }
         delete request;
-        */ 
         
         query = "USE  whambam;";
         header = new Cql3Header(REQUEST_VERSION, 0 , 0, OpCode::QUERY);

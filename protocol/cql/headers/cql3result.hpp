@@ -42,15 +42,15 @@ class Cql3Rows
 {
 public:
     uint32_t getRowCount();
-    Cql3Row getNextRow();
-    Cql3Row getRow(uint32_t rowNum);
+    //Cql3Row getNextRow();
+    //Cql3Row getRow(uint32_t rowNum);
 
 private:
     size_t _startInByteBuffer;
     uint32_t _currentRow;
     uint32_t _maxRow;
     vector <int> _rowPositions;
-    boost::shared_ptr<ByteBuffer> _buffer;
+    ByteBuffer* _buffer;
     Cql3RowMetaData _metaData;
 };
 
@@ -67,7 +67,7 @@ public:
     ~Cql3Result();
 
 private:
-    boost::shared_ptr<ByteBuffer> _resultData;
+    ByteBuffer* _resultData;
     ResultCode _resultCode;
 };
 }  // GeetCass napespace ends
