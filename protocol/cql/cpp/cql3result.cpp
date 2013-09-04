@@ -32,23 +32,19 @@ void Cql3RowMetaData::init(ByteBuffer& buffer, Cql3RowMetaData& metadata)
         Utility::readShortString(buffer, metadata.global_table_spec[1]);
     }
     uint32_t i = 0;
-    Cql3Types type; 
     string col ;
-    vector <string> columns ;
-    while (i< metadata.column_count){
+    while (i++< metadata.column_count){
         Utility::readShortString(buffer, col);
-        type = (Cql3Types) buffer.getUInt16();
-        (void ) type;
-        i++;
-        columns.push_back(col);
+        metadata.columns.push_back(new Column(col, (Cql3Types) buffer.getUInt16()));
     }
     i = 0;
-    uint32_t row_count = buffer.getUInt32();
-    while (i < row_count) {
+    uint32_t _maxRow = buffer.getUInt32();
+
+    while (i < _maxRow) {
         Utility::readLongString(buffer, col);
-        cout << columns[0]  << " = " << col << ", ";
+        cout << metadata.columns[0]->column  << " = " << col << ", ";
         Utility::readLongString(buffer, col);
-        cout << columns[1]  << " = " << col << endl;
+        cout << metadata.columns[1]->column  << " = " << col << endl;
         i++;
     }
 }

@@ -18,6 +18,7 @@
 #ifndef __GEETCASS_CQL3RESULT__
 #define __GEETCASS_CQL3RESULT__
 #include <boost/shared_ptr.hpp>
+#include <boost/noncopyable.hpp>
 #include <bytebuffer.hpp>
 #include <cql3cons.hpp>
 #include <cql3header.hpp>
@@ -28,30 +29,46 @@ using std::vector;
 namespace GeetCass
 {
 
+struct Column
+{
+    string column;
+    Cql3Types column_type;
+    Column(const string& col, Cql3Types type) : column(col), column_type(type)
+    {
+    }
+};
+
 struct Cql3RowMetaData
 {
     static void init(ByteBuffer& buffer, Cql3RowMetaData& metadata);
     uint32_t flags;
     uint32_t column_count;
     string global_table_spec[2];
-    vector<string> column_specs;
+    vector <Column *> columns;
 };
 
+class Cql3Row : public boost::noncopyable
+{
+public:
+    Cql3Row(void *buffer = 0, size_t size = 0, Cql3RowMetaData* metadata =0);
+///TBD
+};
 
 class Cql3Rows
 {
 public:
     uint32_t getRowCount();
-    //Cql3Row getNextRow();
-    //Cql3Row getRow(uint32_t rowNum);
-
+    Cql3Row getNextRow();
+    Cql3Row getRow(uint32_t rowNum);
+// TBD
 private:
+    ByteBuffer *_buffer;
+    Cql3RowMetaData _metaData;
     size_t _startInByteBuffer;
+    size_t _stopInByteBuffer;
     uint32_t _currentRow;
     uint32_t _maxRow;
     vector <int> _rowPositions;
-    ByteBuffer* _buffer;
-    Cql3RowMetaData _metaData;
 };
 
 class Cql3Result 
