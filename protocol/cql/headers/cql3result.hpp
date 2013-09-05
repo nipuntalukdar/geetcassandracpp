@@ -51,6 +51,11 @@ class Cql3Row : public boost::noncopyable
 {
 public:
     Cql3Row(void *buffer = 0, size_t size = 0, Cql3RowMetaData* metadata =0);
+
+private:
+    std::unordered_map<string, size_t > _columnPositions;
+    bool getString(const string& column, string& out);
+    bool getInt(const string& column, int32_t& val);
 ///TBD
 };
 
