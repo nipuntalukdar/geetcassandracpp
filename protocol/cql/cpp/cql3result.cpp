@@ -31,22 +31,14 @@ void Cql3RowMetaData::init(ByteBuffer& buffer, Cql3RowMetaData& metadata)
         Utility::readShortString(buffer, metadata._global_table_spec[0]);
         Utility::readShortString(buffer, metadata._global_table_spec[1]);
     }
-    uint32_t i = 0;
     string col ;
+    uint32_t i = 0;
     while (i++< metadata._column_count){
         Utility::readShortString(buffer, col);
         metadata._columns.push_back(new Column(col, (Cql3Types) buffer.getUInt16()));
     }
-    i = 0;
-    uint32_t _maxRow = buffer.getUInt32();
+    metadata._row_count = buffer.getUInt32();
 
-    while (i < _maxRow) {
-        Utility::readLongString(buffer, col);
-        cout << metadata.getColumn(0)->column  << " = " << col << ", ";
-        Utility::readLongString(buffer, col);
-        cout << metadata.getColumn(1)->column  << " = " << col << endl;
-        i++;
-    }
 }
 
 Column* Cql3RowMetaData::getColumn(size_t index) const throw (char *)
@@ -68,11 +60,83 @@ Cql3RowMetaData::~Cql3RowMetaData()
     _columns.clear();
 }
 
+
+// Code for cql3 rows
+
+void Cql3Rows::init(ByteBuffer& buffer, Cql3Rows& rows)
+{
+    rows._buffer = &buffer;
+    rows._metaData.init(buffer, rows._metaData);
+    rows._startInByteBuffer = buffer.currentPosition();
+    rows._stopInByteBuffer = buffer.capacity();
+    rows._currentRow = 0;
+}
+
+uint32_t  Cql3Rows::getRowCount() const
+{
+    return _metaData.getRowCount();
+}
+
+Cql3Row::Cql3Row(void *buffer, size_t size, unordered_map<Column *, size_t, 
+        ColumnHash, ColumnEq>* positions)
+{
+    _row_size = size;
+    _data = buffer;
+    _buffer = new ByteBuffer(size, ByteBuffer::Endian::BIG, buffer, size);
+    _columnPositions = positions;
+}
+
+Cql3Row::~Cql3Row() 
+{
+    delete _buffer;
+    delete _columnPositions;
+}
+
+bool Cql3Row::getString(const string& column, string& out)
+{
+    Column dummy(column, Cql3Types::INT);
+    std::unordered_map<Column*, size_t, ColumnHash, ColumnEq >::iterator it =
+        _columnPositions->find(&dummy);
+    if (it == _columnPositions->end() || 
+            it->first->getColumnType() == Cql3Types::VARCHAR)
+        return false;
+    try {
+       _buffer->position(it->second);
+       Utility::readLongString(*_buffer, out);
+       return true;
+    }catch (ByteBufferException& e){
+        return false;
+    }
+}   
+
+Cql3Row* Cql3Rows::getNextRow()
+{
+    size_t position = _buffer->currentPosition();
+    uint32_t colc = _metaData.getColumnCount();
+    uint32_t i = 0;
+    size_t size = 0;
+    unordered_map<Column *, size_t, ColumnHash, ColumnEq>* relativePositions
+        = new unordered_map<Column *, size_t, ColumnHash, ColumnEq>();
+    while (i++ < colc) {
+        Column *column = _metaData.getColumn(i);
+        (*relativePositions)[column] = _buffer->currentPosition() - position;
+        if (column->column_type == Cql3Types::VARCHAR) {
+            size = _buffer->getUInt32();
+            _buffer->position(_buffer->currentPosition() + size);
+        }
+    }
+    return new Cql3Row((char *) _buffer->getRaw() + position, _buffer->currentPosition()
+            - position, relativePositions);
+
+}
+
+
 Cql3Result::Cql3Result(ByteBuffer& buffer)
 {
     _resultData = &buffer;
     _resultCode = (ResultCode) buffer.getUInt32();
 }
+
 
 Cql3Result::Cql3Result(): 
     _resultData(0),_resultCode(ResultCode::RESULT_ZERO_INFO)
@@ -103,10 +167,6 @@ void Cql3Result::setBuffer(ByteBuffer& buffer)
 {
     _resultData = &buffer;
     _resultCode = (ResultCode) buffer.getUInt32();
-    if (ResultCode::RESULT_ROWS == _resultCode){
-        Cql3RowMetaData metadata;
-        metadata.init(buffer, metadata);
-    }
 }
 
 ResultCode Cql3Result::getResultCode() const

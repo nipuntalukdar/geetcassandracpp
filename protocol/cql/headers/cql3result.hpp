@@ -36,57 +36,104 @@ struct Column
 {
     string column;
     Cql3Types column_type;
+
     Column(const string& col, Cql3Types type) : column(col), column_type(type)
     {
     }
+
     Column() : column(""), column_type(Cql3Types::INT) 
     {
     }
+
+    string& getColumnName() {
+        return column;
+    }
+
+    Cql3Types getColumnType(){
+        return column_type;
+    }
 };
 
-struct Cql3RowMetaData
+class Cql3RowMetaData
 {
 public:
     static void init(ByteBuffer& buffer, Cql3RowMetaData& metadata);
     Cql3RowMetaData() {
         _flags = 0;
         _column_count = 0;
+        _column_count = 0;
     }
     ~Cql3RowMetaData();
     Column* getColumn(size_t index) const throw (char *);
+    uint32_t getColumnCount() const 
+    {
+        return _column_count;
+    }
+
+    uint32_t getRowCount() const 
+    {
+        return _row_count;
+    }
 private:
     uint32_t _flags;
     uint32_t _column_count;
+    uint32_t _row_count;
     string _global_table_spec[2];
     vector <Column *> _columns;
 };
 
+struct ColumnHash 
+{
+    size_t operator()(Column* const &c) const {
+        if (0 == c)
+            return 0;
+        return std::hash<string>()(c->column);
+    }
+};
+
+struct ColumnEq 
+{
+    bool operator()(Column* const & a1, Column* const& a2 ) const{
+        if (a1 == 0 && a2 == 0){
+            return true;
+        } else if (a1 && a2) {
+            return a1->column == a2->column;
+        } else {
+            return false;
+        }
+    }
+};
+
+
 class Cql3Row : public boost::noncopyable
 {
 public:
-    Cql3Row(void *buffer = 0, size_t size = 0, Cql3RowMetaData* metadata =0);
-
-private:
-    std::unordered_map<string, size_t > _columnPositions;
+    Cql3Row(void *buffer = 0, size_t size = 0, unordered_map<Column*, size_t,
+            ColumnHash, ColumnEq>* columnpos =0);
     bool getString(const string& column, string& out);
     bool getInt(const string& column, int32_t& val);
-///TBD
+    ~Cql3Row();
+private:
+    std::unordered_map<Column*, size_t, ColumnHash, ColumnEq >* _columnPositions;
+    size_t _row_size;
+    void*  _data;
+    ByteBuffer *_buffer;
+
 };
 
 class Cql3Rows
 {
 public:
-    uint32_t getRowCount();
-    Cql3Row getNextRow();
-    Cql3Row getRow(uint32_t rowNum);
-// TBD
+    static void init(ByteBuffer& buffer, Cql3Rows& rows);
+    uint32_t getRowCount() const;
+    Cql3Row* getNextRow();
+    Cql3Row* getRow(uint32_t rowNum);
 private:
     ByteBuffer *_buffer;
     Cql3RowMetaData _metaData;
     size_t _startInByteBuffer;
     size_t _stopInByteBuffer;
     uint32_t _currentRow;
-    uint32_t _maxRow;
     vector <int> _rowPositions;
 };
 
