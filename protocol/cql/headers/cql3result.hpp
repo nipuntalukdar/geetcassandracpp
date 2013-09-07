@@ -24,6 +24,9 @@
 #include <cql3header.hpp>
 #include <encode.hpp>
 #include <vector>
+#include <unordered_map>
+
+using std::unordered_map;
 using std::vector;
 
 namespace GeetCass
@@ -36,15 +39,26 @@ struct Column
     Column(const string& col, Cql3Types type) : column(col), column_type(type)
     {
     }
+    Column() : column(""), column_type(Cql3Types::INT) 
+    {
+    }
 };
 
 struct Cql3RowMetaData
 {
+public:
     static void init(ByteBuffer& buffer, Cql3RowMetaData& metadata);
-    uint32_t flags;
-    uint32_t column_count;
-    string global_table_spec[2];
-    vector <Column *> columns;
+    Cql3RowMetaData() {
+        _flags = 0;
+        _column_count = 0;
+    }
+    ~Cql3RowMetaData();
+    Column* getColumn(size_t index) const throw (char *);
+private:
+    uint32_t _flags;
+    uint32_t _column_count;
+    string _global_table_spec[2];
+    vector <Column *> _columns;
 };
 
 class Cql3Row : public boost::noncopyable

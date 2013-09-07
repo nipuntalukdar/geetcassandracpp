@@ -25,28 +25,47 @@ using std::cout;
 
 void Cql3RowMetaData::init(ByteBuffer& buffer, Cql3RowMetaData& metadata)
 {
-    metadata.flags = buffer.getUInt32();
-    metadata.column_count = buffer.getUInt32();
-    if (GLOBAL_TABLE_SPEC_PRESENT == metadata.flags) {
-        Utility::readShortString(buffer, metadata.global_table_spec[0]);
-        Utility::readShortString(buffer, metadata.global_table_spec[1]);
+    metadata._flags = buffer.getUInt32();
+    metadata._column_count = buffer.getUInt32();
+    if (GLOBAL_TABLE_SPEC_PRESENT == metadata._flags) {
+        Utility::readShortString(buffer, metadata._global_table_spec[0]);
+        Utility::readShortString(buffer, metadata._global_table_spec[1]);
     }
     uint32_t i = 0;
     string col ;
-    while (i++< metadata.column_count){
+    while (i++< metadata._column_count){
         Utility::readShortString(buffer, col);
-        metadata.columns.push_back(new Column(col, (Cql3Types) buffer.getUInt16()));
+        metadata._columns.push_back(new Column(col, (Cql3Types) buffer.getUInt16()));
     }
     i = 0;
     uint32_t _maxRow = buffer.getUInt32();
 
     while (i < _maxRow) {
         Utility::readLongString(buffer, col);
-        cout << metadata.columns[0]->column  << " = " << col << ", ";
+        cout << metadata.getColumn(0)->column  << " = " << col << ", ";
         Utility::readLongString(buffer, col);
-        cout << metadata.columns[1]->column  << " = " << col << endl;
+        cout << metadata.getColumn(1)->column  << " = " << col << endl;
         i++;
     }
+}
+
+Column* Cql3RowMetaData::getColumn(size_t index) const throw (char *)
+{
+    if (index >= _columns.size())
+        throw "out of bound";
+  
+    return _columns[index];
+     
+}
+
+Cql3RowMetaData::~Cql3RowMetaData()
+{
+    vector <Column *>::iterator it = _columns.begin();
+    while (it != _columns.end()) {
+        delete *it;
+        ++it;
+    }
+    _columns.clear();
 }
 
 Cql3Result::Cql3Result(ByteBuffer& buffer)
