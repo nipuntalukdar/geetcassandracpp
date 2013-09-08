@@ -187,7 +187,7 @@ int main()
         while (i++ < 100){
            memset(buf, 0, 256);
            snprintf(buf, 256, 
-                   "insert into mydata (mykey, myval) values ('pp%d', 'bbb%d');", i, i);
+                   "insert into mydata2 (mykey, myval, myval2) values ('pp%d', 'bbb%d', 100);", i, i);
            query += string(buf);
         }
         query += "\nAPPLY BATCH;";
@@ -217,7 +217,7 @@ int main()
         }
         delete request;
 
-        query = "select * from mydata";
+        query = "select * from mydata2";
         header = new Cql3Header(REQUEST_VERSION, 0 , 0, OpCode::QUERY);
         body = new Cql3Query(query, ConsistencyLevel::ONE);
         request = new Cql3Request(header, body);
@@ -237,9 +237,37 @@ int main()
         } else if (cheader->getOpcode() == OpCode::RESULT) {
             read_size =  conn->read(read_data, cheader->getBodyLength());
             cout << "Read size " << read_size << endl;
+            int fdx = open("a.dmp", O_RDWR | O_CREAT , 0644);
+            if (fdx > 0) {
+                write(fdx, read_data, read_size);
+                close(fdx);
+            }
             bf3.rewind();
             Cql3Result result;
             Cql3Response::decodeResult(bf3, result);
+            if (result.getResultCode() == ResultCode::RESULT_ROWS) {
+               Cql3Rows rows;
+               rows.init(bf3, rows, read_size - 1);
+               uint32_t rowcount = rows.getRowCount();
+               cout << "Rows returned " << rowcount << endl;
+               uint32_t a = 0;
+               string colv1, colv2;
+               string col1 = "mykey";
+               string col2 = "myval";
+               string col3 = "myval2";
+               int32_t intval = 0;
+               while (a++ < rowcount) {
+                    Cql3Row *row = rows.getNextRow();
+                    if (row->getString(col1, colv1) &&
+                            row->getString(col2, colv2) &&
+                            row->getInt(col3, intval)) {
+                        cout << col1 << "=" << colv1 << " ," 
+                            << col2 << "=" << colv2 << " ,"
+                            << col3 << "=" << intval << endl; 
+                    }
+                    delete row;
+               }
+            }
         }
         delete request;
 

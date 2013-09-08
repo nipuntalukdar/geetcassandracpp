@@ -121,18 +121,23 @@ private:
 
 };
 
-class Cql3Rows
+class Cql3Rows : public boost::noncopyable
 {
 public:
-    static void init(ByteBuffer& buffer, Cql3Rows& rows);
+    static void init(ByteBuffer& buffer, Cql3Rows& rows, size_t max_pos);
     uint32_t getRowCount() const;
     Cql3Row* getNextRow();
     Cql3Row* getRow(uint32_t rowNum);
+    Cql3Rows(ByteBuffer* buffer = 0, size_t start = 0, size_t stop = 0) :
+        _buffer(buffer), _startInByteBuffer(start), _stopInByteBuffer(stop)
+    {
+    }
+
 private:
     ByteBuffer *_buffer;
-    Cql3RowMetaData _metaData;
     size_t _startInByteBuffer;
     size_t _stopInByteBuffer;
+    Cql3RowMetaData _metaData;
     uint32_t _currentRow;
     vector <int> _rowPositions;
 };

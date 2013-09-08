@@ -63,12 +63,14 @@ Cql3RowMetaData::~Cql3RowMetaData()
 
 // Code for cql3 rows
 
-void Cql3Rows::init(ByteBuffer& buffer, Cql3Rows& rows)
+void Cql3Rows::init(ByteBuffer& buffer, Cql3Rows& rows, size_t max_pos)
 {
     rows._buffer = &buffer;
     rows._metaData.init(buffer, rows._metaData);
     rows._startInByteBuffer = buffer.currentPosition();
-    rows._stopInByteBuffer = buffer.capacity();
+    if (max_pos >= buffer.capacity())
+        max_pos = buffer.capacity() - 1;
+    rows._stopInByteBuffer = max_pos;
     rows._currentRow = 0;
 }
 
@@ -98,11 +100,29 @@ bool Cql3Row::getString(const string& column, string& out)
     std::unordered_map<Column*, size_t, ColumnHash, ColumnEq >::iterator it =
         _columnPositions->find(&dummy);
     if (it == _columnPositions->end() || 
-            it->first->getColumnType() == Cql3Types::VARCHAR)
+            it->first->getColumnType() != Cql3Types::VARCHAR)
         return false;
     try {
        _buffer->position(it->second);
        Utility::readLongString(*_buffer, out);
+       return true;
+    }catch (ByteBufferException& e){
+        return false;
+    }
+}   
+
+bool Cql3Row::getInt(const string& column, int32_t& out)
+{
+    Column dummy(column, Cql3Types::INT);
+    std::unordered_map<Column*, size_t, ColumnHash, ColumnEq >::iterator it =
+        _columnPositions->find(&dummy);
+    if (it == _columnPositions->end() || 
+            it->first->getColumnType() != Cql3Types::INT)
+        return false;
+    try {
+       // first  4 bytes are for size of integerers
+       _buffer->position(it->second + 4);
+       out = _buffer->getInt32();
        return true;
     }catch (ByteBufferException& e){
         return false;
@@ -115,16 +135,22 @@ Cql3Row* Cql3Rows::getNextRow()
     uint32_t colc = _metaData.getColumnCount();
     uint32_t i = 0;
     size_t size = 0;
+    if (_currentRow >= _metaData.getRowCount())
+        return 0;
     unordered_map<Column *, size_t, ColumnHash, ColumnEq>* relativePositions
         = new unordered_map<Column *, size_t, ColumnHash, ColumnEq>();
-    while (i++ < colc) {
+    while (i < colc) {
         Column *column = _metaData.getColumn(i);
         (*relativePositions)[column] = _buffer->currentPosition() - position;
         if (column->column_type == Cql3Types::VARCHAR) {
             size = _buffer->getUInt32();
             _buffer->position(_buffer->currentPosition() + size);
+        } else if (column->column_type == Cql3Types::INT) {
+            _buffer->position(_buffer->currentPosition() + sizeof(int32_t) + 4);
         }
+        i++;
     }
+    _currentRow++;
     return new Cql3Row((char *) _buffer->getRaw() + position, _buffer->currentPosition()
             - position, relativePositions);
 
