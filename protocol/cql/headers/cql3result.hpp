@@ -110,6 +110,8 @@ class Cql3Row : public boost::noncopyable
 public:
     Cql3Row(void *buffer = 0, size_t size = 0, unordered_map<Column*, size_t,
             ColumnHash, ColumnEq>* columnpos =0);
+    bool getBoolean(const string& column, bool& out);
+    bool getAscii(const string& column, string& out);
     bool getString(const string& column, string& out);
     bool getInt(const string& column, int32_t& val);
     ~Cql3Row();

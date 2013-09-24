@@ -18,6 +18,7 @@
 #include <sys/types.h>
 #include <fcntl.h>
 #include <iostream>
+#include <iomanip>
 #include <cql3cons.hpp>
 #include <cql3request.hpp>
 #include <cql3requestbody.hpp>
@@ -184,10 +185,10 @@ int main()
         string val = "";
         query = "BEGIN BATCH \n";
         char buf[256];
-        while (i++ < 100){
+        while (i++ < 5){
            memset(buf, 0, 256);
            snprintf(buf, 256, 
-                   "insert into mydata2 (mykey, myval, myval2) values ('pp%d', 'bbb%d', 100);", i, i);
+                   "insert into mydata2 (mykey, myval, myval2, myval3, myval4, myval5) values ('pp%d', 'bbb%d', %d, 'ascii%d%d', false, -9.999);", i, i,i, i , i+9);
            query += string(buf);
         }
         query += "\nAPPLY BATCH;";
@@ -237,6 +238,7 @@ int main()
         } else if (cheader->getOpcode() == OpCode::RESULT) {
             read_size =  conn->read(read_data, cheader->getBodyLength());
             cout << "Read size " << read_size << endl;
+            unlink("a.dmp");
             int fdx = open("a.dmp", O_RDWR | O_CREAT , 0644);
             if (fdx > 0) {
                 write(fdx, read_data, read_size);
@@ -246,27 +248,49 @@ int main()
             Cql3Result result;
             Cql3Response::decodeResult(bf3, result);
             if (result.getResultCode() == ResultCode::RESULT_ROWS) {
-               Cql3Rows rows;
-               rows.init(bf3, rows, read_size - 1);
-               uint32_t rowcount = rows.getRowCount();
-               cout << "Rows returned " << rowcount << endl;
-               uint32_t a = 0;
-               string colv1, colv2;
-               string col1 = "mykey";
-               string col2 = "myval";
-               string col3 = "myval2";
-               int32_t intval = 0;
-               while (a++ < rowcount) {
-                    Cql3Row *row = rows.getNextRow();
-                    if (row->getString(col1, colv1) &&
-                            row->getString(col2, colv2) &&
-                            row->getInt(col3, intval)) {
-                        cout << col1 << "=" << colv1 << " ," 
-                            << col2 << "=" << colv2 << " ,"
-                            << col3 << "=" << intval << endl; 
-                    }
+                Cql3Rows rows;
+                rows.init(bf3, rows, read_size - 1);
+                uint32_t rowcount = rows.getRowCount();
+                cout << "Rows returned " << rowcount << endl;
+                uint32_t a = 0;
+                // Columns 
+                string col1 = "mykey";
+                string col2 = "myval";
+                string col3 = "myval2";
+                string col4 = "myval3";
+                string col5 = "myval4";  
+
+                // values
+                string val1 = "";
+                string val2 = "";
+                int32_t val3 = 0;
+                string val4 = "";
+                bool  val5 = false;
+
+                Cql3Row *row = 0;
+                while (a++ < rowcount){
+                    row = rows.getNextRow();
+                    if (!row)
+                        break;
+                    do {
+                        if (!row->getString(col1, val1))
+                            break;
+                        if (!row->getString(col2, val2))
+                            break;
+                        if (!row->getInt(col3, val3))
+                            break;
+                        if (!row->getAscii(col4, val4))
+                            break;
+                        if (!row->getBoolean(col5, val5))
+                            break;
+                        cout << col1 << "=" << val1 << ", ";
+                        cout << col2 << "=" << val2 << ", ";
+                        cout << col3 << "=" << val3 << ", ";
+                        cout << col4 << "=" << val4 << ", ";
+                        cout << col5 << "=" << boolalpha << val5 << endl;
+                    } while (false);
                     delete row;
-               }
+                }
             }
         }
         delete request;

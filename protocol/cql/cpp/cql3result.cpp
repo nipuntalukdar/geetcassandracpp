@@ -94,6 +94,44 @@ Cql3Row::~Cql3Row()
     delete _columnPositions;
 }
 
+bool Cql3Row::getBoolean(const string& column, bool& out)
+{
+    Column dummy(column, Cql3Types::INT);
+    std::unordered_map<Column*, size_t, ColumnHash, ColumnEq >::iterator it =
+        _columnPositions->find(&dummy);
+    if (it == _columnPositions->end() || 
+            it->first->getColumnType() != Cql3Types::BOOLEAN)
+        return false;
+    try {
+        _buffer->position(it->second + 4);
+        uint8_t val = _buffer->getUInt8();
+        if (val == 1)
+            out = true;
+        else
+            out = false;
+        return true;
+    }catch (ByteBufferException& e){
+        return false;
+    }
+}   
+
+bool Cql3Row::getAscii(const string& column, string& out)
+{
+    Column dummy(column, Cql3Types::INT);
+    std::unordered_map<Column*, size_t, ColumnHash, ColumnEq >::iterator it =
+        _columnPositions->find(&dummy);
+    if (it == _columnPositions->end() || 
+            it->first->getColumnType() != Cql3Types::ASCII)
+        return false;
+    try {
+       _buffer->position(it->second);
+       Utility::readLongString(*_buffer, out);
+       return true;
+    }catch (ByteBufferException& e){
+        return false;
+    }
+}   
+
 bool Cql3Row::getString(const string& column, string& out)
 {
     Column dummy(column, Cql3Types::INT);
@@ -138,15 +176,24 @@ Cql3Row* Cql3Rows::getNextRow()
     if (_currentRow >= _metaData.getRowCount())
         return 0;
     unordered_map<Column *, size_t, ColumnHash, ColumnEq>* relativePositions
-        = new unordered_map<Column *, size_t, ColumnHash, ColumnEq>();
+        = new unordered_map<Column*, size_t, ColumnHash, ColumnEq>();
     while (i < colc) {
         Column *column = _metaData.getColumn(i);
         (*relativePositions)[column] = _buffer->currentPosition() - position;
         if (column->column_type == Cql3Types::VARCHAR) {
             size = _buffer->getUInt32();
-            _buffer->position(_buffer->currentPosition() + size);
+            _buffer->proceed(size);
         } else if (column->column_type == Cql3Types::INT) {
-            _buffer->position(_buffer->currentPosition() + sizeof(int32_t) + 4);
+            _buffer->proceed(sizeof(int32_t) + 4);
+        } else if (column->column_type == Cql3Types::ASCII) {
+            size = _buffer->getUInt32();
+            _buffer->proceed(size);
+        } else if (column->column_type == Cql3Types::DECIMAL) {
+            size = _buffer->getUInt32();
+            _buffer->proceed(size);
+        } else if (column->column_type == Cql3Types::BOOLEAN) {
+            // 5 = 4+1  , 4 for size of the boolean value, 1 for boolean value
+            _buffer->proceed(5);
         }
         i++;
     }
